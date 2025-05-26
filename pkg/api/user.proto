@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "/pkg/api/;api";
+
+service UserService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse);
+}
+
+message RegisterRequest {
+  string username = 1;
+  string password = 2;
+  string like = 3;
+  string request_id = 4; // 幂等ID
+}
+
+message RegisterResponse {
+  string user_id = 1;
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+}
+
+message GetUserInfoRequest {}
+
+message GetUserInfoResponse {
+  string user_id = 1;
+  string username = 2;
+  string like = 3;
+  repeated float like_embedding = 4; // 喜好词嵌入向量
+  string create_at = 5; // 建议用字符串格式的时间戳
+  string update_at = 6;
+}

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package system;
+
+option go_package = "/pkg/api/;api";
+
+service SystemService {
+  rpc SendFile(SendFileRequest) returns (stream SendFileResponse);
+}
+
+message SendFileRequest {
+  string file_path = 1; // 要传输的文件路径
+}
+
+message SendFileResponse {
+  oneof data {
+    FileMetadata metadata = 1; // 首次响应携带元数据
+    bytes chunk = 2;          // 后续响应携带数据块
+  }
+}
+
+message FileMetadata {
+  string file_name = 1;
+  string mime_type = 2;
+  uint64 file_size = 3;
+}
