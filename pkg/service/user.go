@@ -46,7 +46,7 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 		return nil, errors.New("request_id is required")
 	}
 	// 幂等：先查用户名
-	exist, _ := s.Store.GetUserByUserID(req.RequestId)
+	exist, _ := s.Store.GetUserByUsername(req.Username)
 	if exist != nil {
 		return nil, errors.New("username already exists")
 	}
@@ -84,9 +84,8 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	span := opentracing.StartSpan("UserService.Login")
 	defer span.Finish()
-	span.SetTag("username", req.UserId)
 
-	user, err := s.Store.GetUserByUserID(req.UserId)
+	user, err := s.Store.GetUserByUserID(req.Username)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
@@ -102,6 +101,7 @@ func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 	if err != nil {
 		return nil, err
 	}
+	span.SetTag("username", user.UserID)
 	return &pb.LoginResponse{AccessToken: tokenString}, nil
 }
 
