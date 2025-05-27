@@ -157,7 +157,7 @@ func getUserIDFromContext(ctx context.Context, secret []byte) (string, error) {
 
 // 调用 HuggingFace API 获取 embedding
 func fetchEmbeddingFromHuggingFace(text string) ([]float32, error) {
-	keyData, err := os.ReadFile("../../key/hf_key.txt")
+	keyData, err := os.ReadFile("./key/hf_key.txt")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read huggingface api key: %v", err)
 	}
