@@ -26,13 +26,15 @@ import (
 type UserServiceServer struct {
 	pb.UnimplementedUserServiceServer
 	Store     *storage.PostgresStorage
+	Redis     *storage.RedisStorage // 新增Redis
 	JWTSecret []byte
 }
 
 // NewUserServiceServer 构造函数
-func NewUserServiceServer(store *storage.PostgresStorage, secret string) *UserServiceServer {
+func NewUserServiceServer(store *storage.PostgresStorage, redisStore *storage.RedisStorage, secret string) *UserServiceServer {
 	return &UserServiceServer{
 		Store:     store,
+		Redis:     redisStore,
 		JWTSecret: []byte(secret),
 	}
 }
@@ -44,6 +46,12 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 
 	if req.RequestId == "" {
 		return nil, errors.New("request_id is required")
+	}
+	// 先查Redis缓存
+	if s.Redis != nil {
+		if user, _ := s.Redis.GetUser(ctx, req.Username); user != nil {
+			return nil, errors.New("username already exists")
+		}
 	}
 	// 幂等：先查用户名
 	exist, _ := s.Store.GetUserByUsername(req.Username)
@@ -76,6 +84,10 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 	if err != nil {
 		return nil, err
 	}
+	// 写入Redis缓存
+	if s.Redis != nil {
+		_ = s.Redis.SetUser(ctx, user, 24*time.Hour)
+	}
 	span.SetTag("user_id", userID)
 	return &pb.RegisterResponse{UserId: userID}, nil
 }
@@ -85,9 +97,22 @@ func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 	span := opentracing.StartSpan("UserService.Login")
 	defer span.Finish()
 
-	user, err := s.Store.GetUserByUsername(req.Username)
-	if err != nil || user == nil {
-		return nil, errors.New("user not found")
+	var user *storage.User
+	var err error
+	// 先查Redis
+	if s.Redis != nil {
+		user, _ = s.Redis.GetUser(ctx, req.Username)
+	}
+	// Redis未命中再查数据库
+	if user == nil {
+		user, err = s.Store.GetUserByUsername(req.Username)
+		if err != nil || user == nil {
+			return nil, errors.New("user not found")
+		}
+		// 查库后写入Redis
+		if s.Redis != nil {
+			_ = s.Redis.SetUser(ctx, user, 24*time.Hour)
+		}
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, errors.New("invalid password")
@@ -116,9 +141,21 @@ func (s *UserServiceServer) GetUserInfo(ctx context.Context, req *pb.GetUserInfo
 		return nil, err
 	}
 
-	user, err := s.Store.GetUserByUserID(userID)
-	if err != nil || user == nil {
-		return nil, errors.New("user not found")
+	var user *storage.User
+	// 先查Redis
+	if s.Redis != nil {
+		user, _ = s.Redis.GetUser(ctx, userID)
+	}
+	// Redis未命中再查数据库
+	if user == nil {
+		user, err = s.Store.GetUserByUserID(userID)
+		if err != nil || user == nil {
+			return nil, errors.New("user not found")
+		}
+		// 查库后写入Redis
+		if s.Redis != nil {
+			_ = s.Redis.SetUser(ctx, user, 24*time.Hour)
+		}
 	}
 	return &pb.GetUserInfoResponse{
 		UserId:        user.UserID,

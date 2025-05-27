@@ -16,6 +16,7 @@ client:
 	go run ./client_test/client.go
 
 cleandb:
+	redis-cli -h localhost -p 6379 KEYS "user:*" | xargs -r redis-cli -h localhost -p 6379 DEL
 	psql -U adolph -d grpctest -c "DROP TABLE users;"
 	psql -U adolph -d grpctest -f ./pkg/storage/migrations/users.sql
 

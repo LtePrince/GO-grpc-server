@@ -64,6 +64,12 @@ func AuthInterceptor(secret []byte) grpc.UnaryServerInterceptor {
 	}
 }
 
+// 提供RedisStorage
+func NewRedisStorage() *storage.RedisStorage {
+	// 根据你的实际Redis配置调整
+	return storage.NewRedisStorage("localhost:6379", "", 0)
+}
+
 // 提供PostgresStorage
 func NewPostgresStorage() (*storage.PostgresStorage, error) {
 	dsn := "host=localhost port=5432 user=adolph password=Wzy20031003 dbname=grpctest sslmode=disable"
@@ -71,9 +77,9 @@ func NewPostgresStorage() (*storage.PostgresStorage, error) {
 }
 
 // 提供UserServiceServer
-func NewUserServiceServer(store *storage.PostgresStorage) *service.UserServiceServer {
+func NewUserServiceServer(store *storage.PostgresStorage, redisStore *storage.RedisStorage) *service.UserServiceServer {
 	jwtSecret := "your_jwt_secret"
-	return service.NewUserServiceServer(store, jwtSecret)
+	return service.NewUserServiceServer(store, redisStore, jwtSecret)
 }
 
 // 提供SystemServiceServer
@@ -157,6 +163,7 @@ func main() {
 	fx.New(
 		fx.Provide(
 			NewPostgresStorage,
+			NewRedisStorage, // 注入Redis
 			NewUserServiceServer,
 			NewSystemServiceServer,
 			NewGRPCServer,
