@@ -36,7 +36,7 @@ func main() {
 
 	// 2. 登录
 	loginResp, err := client.Login(context.Background(), &pb.LoginRequest{
-		Username: "testuser",
+		UserId:   registerResp.UserId,
 		Password: "testpass",
 	})
 	if err != nil {

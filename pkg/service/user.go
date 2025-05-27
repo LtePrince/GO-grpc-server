@@ -41,7 +41,6 @@ func NewUserServiceServer(store *storage.PostgresStorage, secret string) *UserSe
 func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	span := opentracing.StartSpan("UserService.Register")
 	defer span.Finish()
-	span.SetTag("user_id", req.RequestId)
 
 	if req.RequestId == "" {
 		return nil, errors.New("request_id is required")
@@ -77,6 +76,7 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 	if err != nil {
 		return nil, err
 	}
+	span.SetTag("user_id", userID)
 	return &pb.RegisterResponse{UserId: userID}, nil
 }
 
@@ -84,9 +84,9 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	span := opentracing.StartSpan("UserService.Login")
 	defer span.Finish()
-	span.SetTag("username", req.Username)
+	span.SetTag("username", req.UserId)
 
-	user, err := s.Store.GetUserByUsername(req.Username)
+	user, err := s.Store.GetUserByUserID(req.UserId)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
