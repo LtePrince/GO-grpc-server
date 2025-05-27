@@ -4,7 +4,7 @@ CREATE TABLE users (
     username VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     user_like TEXT,
-    user_like_embedding vector(768), -- 假设使用pgvector扩展
+    user_like_embedding vector(1024), -- 假设使用pgvector扩展
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );

@@ -1,3 +1,5 @@
+github.com/Kardbord/hfapigo/v3 v3.1.0 h1:IngWVyYqwYPHNB2qqBjtKFTzpjFenXpIa/9wQboK+NQ=
+github.com/Kardbord/hfapigo/v3 v3.1.0/go.mod h1:Etti9fKY9ioeDTGd+A1CTHDb6EkPAWghSkilbTIaK3I=
 github.com/cenkalti/backoff/v5 v5.0.2 h1:rIfFVxEf1QsI7E1ZHfp/B4DF/6QBAUhmgkxc0H7Zss8=
 github.com/cenkalti/backoff/v5 v5.0.2/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

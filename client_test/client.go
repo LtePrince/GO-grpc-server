@@ -52,5 +52,12 @@ func main() {
 		log.Fatalf("GetUserInfo failed: %v", err)
 	}
 	fmt.Printf("UserInfo: user_id=%s, username=%s, like=%s, embedding=%v, create_at=%s\n",
-		userInfo.UserId, userInfo.Username, userInfo.Like, userInfo.LikeEmbedding, userInfo.CreateAt)
+		userInfo.UserId, userInfo.Username, userInfo.Like,
+		func() []float32 {
+			if len(userInfo.LikeEmbedding) > 5 {
+				return userInfo.LikeEmbedding[:5]
+			}
+			return userInfo.LikeEmbedding
+		}(),
+		userInfo.CreateAt)
 }

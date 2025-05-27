@@ -1,9 +1,14 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
-	"math/rand/v2"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"time"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -52,9 +57,10 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 		return nil, err
 	}
 	// 获取 user_like_embedding（此处用假数据，实际应调用外部服务）
-	userLikeEmbedding := make([]float32, 768)
-	for i := range userLikeEmbedding {
-		userLikeEmbedding[i] = rand.Float32()
+	// 调用 HuggingFace API 获取 embedding
+	userLikeEmbedding, err := fetchEmbeddingFromHuggingFace(req.Like)
+	if err != nil {
+		return nil, fmt.Errorf("embedding service error: %v", err)
 	}
 	now := time.Now()
 	userID := uuid.NewString()
@@ -147,4 +153,55 @@ func getUserIDFromContext(ctx context.Context, secret []byte) (string, error) {
 		return "", errors.New("invalid token claims")
 	}
 	return userID, nil
+}
+
+// 调用 HuggingFace API 获取 embedding
+func fetchEmbeddingFromHuggingFace(text string) ([]float32, error) {
+	keyData, err := os.ReadFile("../../key/hf_key.txt")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read huggingface api key: %v", err)
+	}
+	apiToken := string(keyData)
+	url := "https://router.huggingface.co/hf-inference/models/intfloat/multilingual-e5-large-instruct/pipeline/feature-extraction"
+
+	requestData := map[string]string{"inputs": text}
+	jsonData, _ := json.Marshal(requestData)
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("huggingface api error: %s, body: %s", resp.Status, string(body))
+	}
+
+	// 先尝试二维数组
+	var response2 [][]float64
+	if err := json.Unmarshal(body, &response2); err == nil && len(response2) > 0 {
+		embedding := make([]float32, len(response2[0]))
+		for i, v := range response2[0] {
+			embedding[i] = float32(v)
+		}
+		return embedding, nil
+	}
+
+	// 再尝试一维数组
+	var response1 []float64
+	if err := json.Unmarshal(body, &response1); err == nil && len(response1) > 0 {
+		embedding := make([]float32, len(response1))
+		for i, v := range response1 {
+			embedding[i] = float32(v)
+		}
+		return embedding, nil
+	}
+
+	return nil, fmt.Errorf("embedding response format error, body: %s", string(body))
 }

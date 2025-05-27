@@ -28,4 +28,4 @@ pprof:
 	curl http://localhost:6060/debug/pprof/profile?seconds=30 -o ./report/profile.out
 	go tool pprof -svg ./report/profile.out > ./report/profile.svg
 
-.PHONY: jaeger-up jaeger-down run client cleandb test
+.PHONY: jaeger-up jaeger-down run client cleandb test pprof

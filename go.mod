@@ -36,6 +36,7 @@ require (
 )
 
 require (
+	github.com/Kardbord/hfapigo/v3 v3.1.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0
