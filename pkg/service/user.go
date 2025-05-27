@@ -85,7 +85,7 @@ func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 	span := opentracing.StartSpan("UserService.Login")
 	defer span.Finish()
 
-	user, err := s.Store.GetUserByUserID(req.Username)
+	user, err := s.Store.GetUserByUsername(req.Username)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
