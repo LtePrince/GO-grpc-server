@@ -1,3 +1,4 @@
+# localhost:16686
 jaeger-up:
 	sudo docker-compose -f ./docker/docker-compose.yml up -d
 
@@ -20,5 +21,11 @@ cleandb:
 
 test:
 	go test ./client_test -v
+
+pprof:
+	mkdir -p ./report
+	rm -rf ./report/*
+	curl http://localhost:6060/debug/pprof/profile?seconds=30 -o ./report/profile.out
+	go tool pprof -svg ./report/profile.out > ./report/profile.svg
 
 .PHONY: jaeger-up jaeger-down run client cleandb test

@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"time"
 
+	opentracing "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -33,6 +34,10 @@ func NewUserServiceServer(store *storage.PostgresStorage, secret string) *UserSe
 
 // Register 用户注册（幂等）
 func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
+	span := opentracing.StartSpan("UserService.Register")
+	defer span.Finish()
+	span.SetTag("user_id", req.RequestId)
+
 	if req.RequestId == "" {
 		return nil, errors.New("request_id is required")
 	}
@@ -71,6 +76,10 @@ func (s *UserServiceServer) Register(ctx context.Context, req *pb.RegisterReques
 
 // Login 用户登录，返回JWT
 func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
+	span := opentracing.StartSpan("UserService.Login")
+	defer span.Finish()
+	span.SetTag("username", req.Username)
+
 	user, err := s.Store.GetUserByUsername(req.Username)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
@@ -93,9 +102,14 @@ func (s *UserServiceServer) Login(ctx context.Context, req *pb.LoginRequest) (*p
 // GetUserInfo 获取用户信息（需鉴权）
 func (s *UserServiceServer) GetUserInfo(ctx context.Context, req *pb.GetUserInfoRequest) (*pb.GetUserInfoResponse, error) {
 	userID, err := getUserIDFromContext(ctx, s.JWTSecret)
+	span := opentracing.StartSpan("UserService.GetUserInfo")
+	defer span.Finish()
+	span.SetTag("user_id", userID)
+
 	if err != nil {
 		return nil, err
 	}
+
 	user, err := s.Store.GetUserByUserID(userID)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")

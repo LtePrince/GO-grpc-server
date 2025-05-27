@@ -12,6 +12,14 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 
+	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
+	jaegerlog "github.com/uber/jaeger-client-go/log"
+
+	"net/http"
+	_ "net/http/pprof"
+
 	pb "github.com/LtePrince/GO-grpc-server/pkg/api"
 	"github.com/LtePrince/GO-grpc-server/pkg/service"
 	"github.com/LtePrince/GO-grpc-server/pkg/storage"
@@ -70,7 +78,7 @@ func NewUserServiceServer(store *storage.PostgresStorage) *service.UserServiceSe
 
 // 提供SystemServiceServer
 func NewSystemServiceServer() *service.SystemServiceServer {
-	return service.NewSystemServiceServer("./data")
+	return service.NewSystemServiceServer("../data")
 }
 
 // 提供gRPC Server
@@ -107,6 +115,45 @@ func RegisterServer(lc fx.Lifecycle, srv *grpc.Server, userSrv *service.UserServ
 }
 
 func main() {
+	cfg := jaegercfg.Configuration{
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans:           true,
+			LocalAgentHostPort: "127.0.0.1:6831",
+		},
+		ServiceName: "deardai-shop",
+	}
+	tracer, closer, err := cfg.NewTracer(jaegercfg.Logger(jaegerlog.StdLogger))
+	if err != nil {
+		panic(err)
+	}
+	defer closer.Close()
+	opentracing.SetGlobalTracer(tracer)
+
+	//单个追踪
+	// single_span := tracer.StartSpan("single-span")
+	// time.Sleep(time.Second * 3)
+	// single_span.Finish()
+
+	//父子追踪
+
+	// parentSpan := tracer.StartSpan("main")
+
+	// span := tracer.StartSpan("func1", opentracing.ChildOf(parentSpan.Context()))
+	// time.Sleep(time.Second)
+	// span.Finish()
+	// span2 := tracer.StartSpan("func2", opentracing.ChildOf(span.Context()))
+	// time.Sleep(time.Second * 3)
+	// span2.Finish()
+
+	// parentSpan.Finish()
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	fx.New(
 		fx.Provide(
 			NewPostgresStorage,
